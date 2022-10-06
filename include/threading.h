@@ -19,7 +19,7 @@ struct threadData
     bool selfDestroy;
     unsigned long ID;
 };
-
+//NICESCHEISSE
 class threading
 {
 private:
