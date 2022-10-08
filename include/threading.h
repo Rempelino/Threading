@@ -99,6 +99,9 @@ threading::threading(bool (*functionPointer)(), unsigned long executeIntervall =
 
 void threading::execute()
 {
+    if (processing){
+        return;
+    }
     if (amountOfExecuteJumps > 0)
     {
         amountOfExecuteJumps--;
@@ -247,9 +250,9 @@ unsigned long threading::getTimeTillNextStep()
     {
         if (data[i].threadAlive)
         {
-            if (data[i].executeIntervall < timeTillNextStep)
+            if (data[i].timeTillNextExecute < timeTillNextStep)
             {
-                timeTillNextStep = data[i].executeIntervall;
+                timeTillNextStep = data[i].timeTillNextExecute;
             }
         }
         else
