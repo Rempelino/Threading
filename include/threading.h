@@ -19,7 +19,7 @@ struct threadData
     bool selfDestroy;
     unsigned long ID;
 };
-//NICESCHEISSE
+
 class threading
 {
 private:
@@ -35,7 +35,6 @@ private:
     unsigned long getNewID();
     unsigned long getThreadByID();
     unsigned long getTimeTillNextStep();
-    int x;
 
 public:
     threading(void (*functionPointer)(), unsigned long executeIntervall, unsigned long executeDuration, bool timeOut);
