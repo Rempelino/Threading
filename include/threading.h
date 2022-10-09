@@ -17,6 +17,7 @@ struct threadData
     unsigned long timeTillNextExecute;
     bool timeOut;
     bool selfDestroy;
+    bool isFirstExecute;
     unsigned long ID;
 };
 
@@ -34,7 +35,7 @@ private:
     int getFirstFreeThread();
     unsigned long getNewID();
     unsigned long getThreadByID();
-    unsigned long getTimeTillNextStep();
+    unsigned long getTimeTillNextExecute();
 
 public:
     threading(void (*functionPointer)(), unsigned long executeIntervall, unsigned long executeDuration, bool timeOut);
@@ -48,7 +49,7 @@ public:
 threading threadInitializer;
 ISR(TIMER1_COMPA_vect)
 {
-  threadInitializer.execute();
+    threadInitializer.execute();
 }
 
 threadData threading::data[MAXIMUM_AMOUNT_OF_THREADS] = {0};
@@ -58,7 +59,8 @@ unsigned long threading::IDcounter = 0;
 unsigned long threading::timeStampLastExecute = 0;
 unsigned long threading::amountOfExecuteJumps = 0;
 
-threading::threading(){
+threading::threading()
+{
     processing = true;
     initialize();
     processing = false;
@@ -78,6 +80,12 @@ threading::threading(void (*functionPointer)(), unsigned long executeIntervall =
     this->data[x].threadIsVoid = true;
     this->data[x].threadAlive = true;
     this->data[x].ID = ID;
+    this->data[x].isFirstExecute = true;
+    amountOfExecuteJumps = 0;
+    if (x == 0)
+    {
+        timeStampLastExecute = millis();
+    }
     processing = false;
 }
 
@@ -89,17 +97,25 @@ threading::threading(bool (*functionPointer)(), unsigned long executeIntervall =
     this->ID = getNewID();
     this->data[x].functionPointerBool = functionPointer;
     this->data[x].executeIntervall = executeIntervall;
+    this->data[x].timeTillNextExecute = 0;
     this->data[x].timeOut = false;
     this->data[x].threadIsBool = true;
     this->data[x].threadAlive = true;
     this->data[x].selfDestroy = selfDestroy;
     this->data[x].ID = ID;
+    this->data[x].isFirstExecute = true;
+    amountOfExecuteJumps = 0;
+    if (x == 0)
+    {
+        timeStampLastExecute = millis();
+    }
     processing = false;
 }
 
 void threading::execute()
 {
-    if (processing){
+    if (processing)
+    {
         return;
     }
     if (amountOfExecuteJumps > 0)
@@ -153,15 +169,24 @@ void threading::execute()
             data[x].timeTillKill = data[x].timeTillKill - elapsedTime;
             if (data[x].executeIntervall != 0)
             {
-                data[x].timeTillNextExecute = data[x].timeTillNextExecute - elapsedTime;
+                if (data[x].isFirstExecute)
+                {
+                    data[x].timeTillNextExecute = data[x].executeIntervall;
+                    data[x].isFirstExecute = false;
+                }
+                else
+                {
+                    data[x].timeTillNextExecute = data[x].timeTillNextExecute - elapsedTime;
+                }
             }
             x++;
         }
     }
     timeStampLastExecute = timeStampThisExecute;
-    unsigned long timeTillNextStep = getTimeTillNextStep();
+    unsigned long timeTillNextStep = getTimeTillNextExecute();
     amountOfExecuteJumps = timeTillNextStep / 4;
-    if (amountOfExecuteJumps > 0){
+    if (amountOfExecuteJumps > 0)
+    {
         amountOfExecuteJumps--;
     }
     if (amountOfExecuteJumps > 0)
@@ -243,16 +268,16 @@ bool threading::IsAlive()
     return false;
 }
 
-unsigned long threading::getTimeTillNextStep()
+unsigned long threading::getTimeTillNextExecute()
 {
-    unsigned long timeTillNextStep = 4294967295;
+    unsigned long timeTillNextExecute = 4294967295;
     for (int i = 0; i < MAXIMUM_AMOUNT_OF_THREADS; i++)
     {
         if (data[i].threadAlive)
         {
-            if (data[i].timeTillNextExecute < timeTillNextStep)
+            if (data[i].timeTillNextExecute < timeTillNextExecute)
             {
-                timeTillNextStep = data[i].timeTillNextExecute;
+                timeTillNextExecute = data[i].timeTillNextExecute;
             }
         }
         else
@@ -260,7 +285,7 @@ unsigned long threading::getTimeTillNextStep()
             break;
         }
     }
-    return timeTillNextStep;
+    return timeTillNextExecute;
 }
 
 void threading::initialize()
@@ -284,11 +309,10 @@ void threading::initialize()
     // 16 = 1 microsekunde
     OCR1A = 16000;          // compare match register 16MHz/256/1Hz
     TCCR1B |= (1 << WGM12); // CTC mode
-    // TCCR1B |= (1 << CS10);   // no prescaler
     TCCR1B &= ~(1 << CS10);
     TCCR1B &= ~(1 << CS11);
     TCCR1B &= ~(1 << CS12);
-    TCCR1B |= (1 << CS10);   // 1/8 prescaler
+    TCCR1B |= (1 << CS10);   // no prescaler
     TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
     interrupts();
 }
