@@ -8,3 +8,4 @@ src
 lib
 platformio.ini
 test
+library.json
